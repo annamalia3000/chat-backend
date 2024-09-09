@@ -26,6 +26,18 @@ const userState = [];
 // Массив для хранения истории сообщений
 const messageHistory = [];
 
+// Функция для рассылки обновлённого списка пользователей
+const broadcastUsersUpdate = () => {
+  const usersUpdate = JSON.stringify({
+    type: "update-users",
+    users: userState,
+  });
+
+  [...wsServer.clients]
+    .filter((client) => client.readyState === WebSocket.OPEN)
+    .forEach((client) => client.send(usersUpdate));
+};
+
 // HTTP маршрут для регистрации нового пользователя
 app.post("/new-user", async (req, res) => {
   const { name } = req.body;
@@ -45,6 +57,7 @@ app.post("/new-user", async (req, res) => {
       name: name,
     };
     userState.push(newUser);
+    broadcastUsersUpdate();
 
     return res.status(200).json({
       status: "ok",
@@ -60,18 +73,6 @@ app.post("/new-user", async (req, res) => {
 
 const server = http.createServer(app);
 const wsServer = new WebSocketServer({ server });
-
-// Функция для рассылки обновлённого списка пользователей
-const broadcastUsersUpdate = () => {
-  const usersUpdate = JSON.stringify({
-    type: "update-users",
-    users: userState,
-  });
-
-  [...wsServer.clients]
-    .filter((client) => client.readyState === WebSocket.OPEN)
-    .forEach((client) => client.send(usersUpdate));
-};
 
 // Обработка подключения WebSocket
 wsServer.on("connection", (ws) => {
